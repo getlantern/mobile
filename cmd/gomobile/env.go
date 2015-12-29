@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/kardianos/osext"
 )
 
 // General mobile build environment. Initialized by envInit.
@@ -30,13 +32,11 @@ var (
 
 func buildEnvInit() (cleanup func(), err error) {
 	// Find gomobilepath.
-	gopath := goEnv("GOPATH")
-	for _, p := range filepath.SplitList(gopath) {
-		gomobilepath = filepath.Join(p, "pkg", "gomobile")
-		if _, err := os.Stat(gomobilepath); buildN || err == nil {
-			break
-		}
+	execpath, err := osext.Executable()
+	if err != nil {
+		return nil, errors.New("Unable to determine directory of gomobile command: " + err.Error())
 	}
+	gomobilepath = strings.Replace(execpath, fmt.Sprintf("bin%cgomobile", filepath.Separator), fmt.Sprintf("pkg%cgomobile", filepath.Separator), -1)
 
 	if err := envInit(); err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func buildEnvInit() (cleanup func(), err error) {
 		verpath := filepath.Join(gomobilepath, "version")
 		installedVersion, err := ioutil.ReadFile(verpath)
 		if err != nil {
-			return nil, errors.New("toolchain partially installed, run `gomobile init`")
+			return nil, errors.New("toolchain partially installed, run `gomobile init` " + err.Error())
 		}
 		if !bytes.Equal(installedVersion, goVersionOut) {
 			return nil, errors.New("toolchain out of date, run `gomobile init`")
