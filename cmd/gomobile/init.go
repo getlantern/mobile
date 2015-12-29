@@ -55,7 +55,7 @@ func init() {
 var cmdInit = &command{
 	run:   runInit,
 	Name:  "init",
-	Usage: "[-u]",
+	Usage: "[-u] [-noios]",
 	Short: "install android compiler toolchain",
 	Long: `
 Init installs the Android C++ compiler toolchain and builds copies
@@ -66,13 +66,17 @@ The toolchain is installed in $GOPATH/pkg/gomobile.
 
 The -u option forces download and installation of the new toolchain
 even when the toolchain exists.
+
+The -noios option skips installation of ios components
 `,
 }
 
-var initU bool // -u
+var initU bool     // -u
+var initNoios bool // -noios
 
 func init() {
 	cmdInit.flag.BoolVar(&initU, "u", false, "force toolchain download")
+	cmdInit.flag.BoolVar(&initNoios, "noios", false, "don't initialize iOS components")
 }
 
 func runInit(cmd *command) error {
@@ -123,7 +127,7 @@ func runInit(cmd *command) error {
 		return err
 	}
 
-	if runtime.GOOS == "darwin" {
+	if !initNoios && runtime.GOOS == "darwin" {
 		// Install common x/mobile packages for local development.
 		// These are often slow to compile (due to cgo) and easy to forget.
 		//
@@ -178,7 +182,7 @@ var commonPkgs = []string{
 }
 
 func installDarwin() error {
-	if goos != "darwin" {
+	if initNoios || goos != "darwin" {
 		return nil // Only build iOS compilers on OS X.
 	}
 	if err := installStd(darwinArmEnv); err != nil {
